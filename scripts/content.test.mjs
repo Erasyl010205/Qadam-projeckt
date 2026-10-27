@@ -46,10 +46,12 @@ for (const course of courses) {
         text(section.title, `section ${index} title`);
         list(section.paragraphs, 1, `section ${index} explanation`);
         section.paragraphs.forEach(paragraph => text(paragraph, `section ${index} paragraph`));
+        list(section.details, 1, `section ${index} detailed reading`);
+        section.details.forEach(paragraph => text(paragraph, `section ${index} detailed paragraph`));
         if (section.code !== undefined) text(section.code, `section ${index} code`);
       });
-      // A learner needs connected explanations, not headings followed only by code.
-      const explanationLength = lesson.sections.flatMap(section => section.paragraphs).join(' ').length;
+      // Count both concise explanations and the optional detailed reading.
+      const explanationLength = lesson.sections.flatMap(section => [...section.paragraphs, ...(section.details || [])]).join(' ').length;
       assert.ok(explanationLength >= 1000, 'theory needs at least 1,000 characters of explanatory prose');
       list(lesson.examples, 2, 'worked examples');
       lesson.examples.forEach((example, index) => {

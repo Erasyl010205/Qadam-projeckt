@@ -1,3 +1,5 @@
+import { renderLesson } from './lesson-view.js';
+import { gradeLesson, lessonChecks, workspaceTask } from './learning.js';
 import { courses, demoLeaders } from './data.js';
 import { loadState, saveState, completeLesson, resetState } from './state.js';
 
@@ -6,6 +8,7 @@ let courseFilter = 'all';
 let searchTerm = '';
 let battleMode = '1v1';
 let activeEditorLesson = null;
+let activeEditorStarter = '';
 let toastTimer;
 const app = document.querySelector('#app');
 const modal = document.querySelector('#modal');
@@ -101,7 +104,7 @@ function dashboard() {
   return shell('dashboard', `${heading('Бүгін не үйренеміз?', '', `Сәлем, ${esc(state.name)}! Қайта оралғаныңа қуаныштымыз 👋`)}<div class="dashboard-top"><section class="hero-card"><div class="hero-kicker"><span></span>ӨЗ БОЛАШАҒЫҢДЫ КОДТА</div><h2>Кішкентай қадам.<br>Үлкен мүмкіндік.</h2><p>Python мен Java-ны қазақша үйрен.<br>Идеяңды кодқа, біліміңді дағдыға айналдыр.</p><a href="#lesson/${lesson.id}" class="btn btn-primary">${icon('play')}${state.completed.length ? 'Оқуды жалғастыру' : 'Алғашқы сабақты бастау'}${icon('arrow-right')}</a>${codeArt()}</section><section class="panel daily-card"><div class="card-label">${icon('target')}Күндік мақсатың</div><div class="goal-ring" style="--progress:${Math.min(100, count / state.goal * 100)}%"><div><strong>${count}</strong><span>/${state.goal}</span><small>сабақ аяқталды</small></div></div><p>${count >= state.goal ? 'Керемет! Бүгінгі мақсат орындалды.' : 'Әр сабақ сені алға жетелейді.'}</p><div class="week-days">${weekDays()}</div></section></div><div class="stat-grid"><div class="panel stat-card"><div class="stat-icon">${icon('book-open')}</div><div><div class="stat-number">${state.completed.length}<small> / ${allLessons.length}</small></div><p>Аяқталған сабақ</p></div>${icon('arrow-up-right','corner-icon')}</div><div class="panel stat-card"><div class="stat-icon gold">${icon('zap')}</div><div><div class="stat-number">${state.xp.toLocaleString()}<small> XP</small></div><p>Жиналған тәжірибе</p></div>${icon('arrow-up-right','corner-icon')}</div><div class="panel stat-card"><div class="stat-icon mint">${icon('sprout')}</div><div><div class="stat-number">${level()}<small> деңгей</small></div><p>Жаңа бастаушы</p></div>${icon('arrow-up-right','corner-icon')}</div></div><div class="dashboard-lower"><section><div class="section-heading"><h2>Сенің оқу жолың</h2><a href="#courses" class="text-link">Барлық курстар${icon('arrow-right')}</a></div><div class="course-grid">${courses.map(courseCard).join('')}</div><section class="battle-banner"><div class="battle-emblem">${icon('swords')}</div><div><span class="battle-tag"><i></i>БІРГЕ ҮЙРЕН. БІРГЕ ӨС.</span><h3>Кодыңды сынауға дайынсың ба?</h3><p>Досыңмен 1v1 немесе командамен 2v2. Біліміңді жаңа деңгейге көтер.</p></div><a href="#battles" class="btn">Шайқас алаңы${icon('arrow-up-right')}</a></section></section><aside class="panel leader-panel"><div class="section-heading"><h2>${icon('trophy','trophy-small')} Аптаның үздіктері</h2><a href="#leaderboard" aria-label="Толық рейтинг">${icon('arrow-up-right')}</a></div><p class="leader-caption"><span class="dot"></span>Рейтингтің демо көрінісі</p>${demoLeaders.slice(0,4).map((p,i) => `<div class="leader-row"><span class="leader-place ${i === 0 ? 'first' : ''}">${i + 1}</span><span class="avatar ${p.color}">${esc(initials(p.name))}</span><div><div class="leader-name">${esc(p.name)}</div><div class="leader-user">@${esc(p.username)}</div></div><span class="leader-xp">${p.xp.toLocaleString()}<small> XP</small></span></div>`).join('')}<div class="your-rank">${icon('zap')}<span>Сенің тәжірибең</span><strong>${state.xp} XP</strong></div><div style="margin-top:24px;padding-top:19px;border-top:1px solid #23304a"><div class="small-label" style="font-size:9px">БҮГІНГІ ОЙ</div><p style="font-size:11px;line-height:1.9;margin-top:10px;color:#a1b0c8">«Үлкен жетістік — күн сайын қайталанатын шағын әрекеттердің нәтижесі.»</p><span style="display:block;margin-top:12px;color:#617694;font-size:9px">Бүгінгі қадамыңды жаса →</span></div></aside></div>`);
 }
 function courseCatalog() {
-  return shell('courses', `${heading('Біліміңе жаңа бағыт бер.','Өзіңе ұнайтын тілді таңда. Алғашқы жолыңды бүгін жаз.','КУРС КАТАЛОГЫ')}<div class="filter-bar"><button class="filter-btn ${courseFilter === 'all' ? 'active' : ''}" data-filter="all">Барлық курстар</button><button class="filter-btn ${courseFilter === 'python' ? 'active' : ''}" data-filter="python">Python</button><button class="filter-btn ${courseFilter === 'java' ? 'active' : ''}" data-filter="java">Java</button><div class="search-wrap">${icon('search')}<input id="course-search" class="form-control" placeholder="Курсты іздеу..." value="${esc(searchTerm)}" aria-label="Курсты іздеу"></div></div><div id="course-results" class="course-grid catalog-grid">${filteredCourses()}</div><div class="notice mt-4">${icon('sparkles')}<div><strong>Өз қарқыныңмен үйрен.</strong> Қысқа түсіндірмелер, код мысалдары және әр сабақтан кейін білімді бекіту сұрағы. Прогресің осы браузерде сақталады.</div></div>`);
+  return shell('courses', `${heading('Біліміңе жаңа бағыт бер.','Өзіңе ұнайтын тілді таңда. Алғашқы жолыңды бүгін жаз.','КУРС КАТАЛОГЫ')}<div class="filter-bar"><button class="filter-btn ${courseFilter === 'all' ? 'active' : ''}" data-filter="all">Барлық курстар</button><button class="filter-btn ${courseFilter === 'python' ? 'active' : ''}" data-filter="python">Python</button><button class="filter-btn ${courseFilter === 'java' ? 'active' : ''}" data-filter="java">Java</button><div class="search-wrap">${icon('search')}<input id="course-search" class="form-control" placeholder="Курсты іздеу..." value="${esc(searchTerm)}" aria-label="Курсты іздеу"></div></div><div id="course-results" class="course-grid catalog-grid">${filteredCourses()}</div><div class="notice mt-4">${icon('sparkles')}<div><strong>Өз қарқыныңмен үйрен.</strong> Толық теория, қадамдап талданған мысалдар, жаттығулар және бірнеше тексеру сұрағы. Прогресің осы браузерде сақталады.</div></div>`);
 }
 function filteredCourses() {
   const matches = courses.filter(c => (courseFilter === 'all' || c.id === courseFilter) && (c.title + c.description + c.language).toLowerCase().includes(searchTerm.toLowerCase()));
@@ -112,21 +115,43 @@ function courseDetail(id) {
   if (!course) return notFound();
   const p = progress(course);
   const next = course.lessons.find(l => !state.completed.includes(l.id)) || course.lessons[0];
-  return shell('course', `<a href="#courses" class="header-back">${icon('arrow-left')}Курс каталогына оралу</a><div class="course-detail"><div><div class="panel course-intro">${languageIcon(course.id)}<div class="small-label mb-2">ҚАЗАҚША · БАСТАПҚЫ ДЕҢГЕЙ</div><h2>${esc(course.title)}</h2><p>${esc(course.description)} Әр сабақта жаңа тақырыпты түсініп, код мысалын талдап, біліміңді бекітесің.</p></div><div class="section-heading"><h2>Курс бағдарламасы</h2><span class="muted" style="font-size:10px">${course.lessons.length} сабақ</span></div><div class="panel lesson-list">${course.lessons.map((l,i) => `<a class="lesson-row" href="#lesson/${l.id}"><span class="lesson-number ${state.completed.includes(l.id) ? 'complete' : ''}">${state.completed.includes(l.id) ? icon('check') : String(i+1).padStart(2,'0')}</span><div><h3>${esc(l.title)}</h3><p>${l.minutes} минут · ${l.xp} XP · ${esc(l.module)}</p></div>${icon('chevron-right')}</a>`).join('')}</div></div><aside class="panel course-summary"><h3>Сенің оқу жолың</h3><p style="font-size:11px">${p.completed} сабақ аяқталды · ${p.percent}%</p><div class="progress mt-3 mb-3" role="progressbar" aria-label="Курс прогресі" aria-valuenow="${p.percent}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:${p.percent}%"></div></div><div class="summary-item"><span>Деңгей</span><strong>Бастапқы</strong></div><div class="summary-item"><span>Тіл</span><strong>Қазақша</strong></div><div class="summary-item"><span>Көлемі</span><strong>${course.lessons.length} сабақ</strong></div><div class="summary-item"><span>Жалпы тәжірибе</span><strong>${course.lessons.reduce((n,l) => n+l.xp,0)} XP</strong></div><a class="btn btn-primary w-100 mt-4" href="#lesson/${next.id}">${icon('play')}${p.completed ? 'Жалғастыру' : 'Бастау'}</a><p class="mt-3" style="font-size:9px;text-align:center">Тегін демо курс · Өз қарқыныңмен үйрен</p></aside></div>`);
+  return shell('course', `<a href="#courses" class="header-back">${icon('arrow-left')}Курс каталогына оралу</a><div class="course-detail"><div><div class="panel course-intro">${languageIcon(course.id)}<div class="small-label mb-2">ҚАЗАҚША · БАСТАПҚЫ ДЕҢГЕЙ</div><h2>${esc(course.title)}</h2><p>${esc(course.description)} Әр сабақта оқу мақсаттары, толық теория, екі талданған мысал, үш жаттығу және үш тексеру сұрағы бар.</p></div><div class="section-heading"><h2>Курс бағдарламасы</h2><span class="muted" style="font-size:10px">${course.lessons.length} сабақ</span></div><div class="panel lesson-list">${course.lessons.map((l,i) => `<a class="lesson-row" href="#lesson/${l.id}"><span class="lesson-number ${state.completed.includes(l.id) ? 'complete' : ''}">${state.completed.includes(l.id) ? icon('check') : String(i+1).padStart(2,'0')}</span><div><h3>${esc(l.title)}</h3><p>${l.minutes} минут · ${l.xp} XP · ${esc(l.module)}</p></div>${icon('chevron-right')}</a>`).join('')}</div></div><aside class="panel course-summary"><h3>Сенің оқу жолың</h3><p style="font-size:11px">${p.completed} сабақ аяқталды · ${p.percent}%</p><div class="progress mt-3 mb-3" role="progressbar" aria-label="Курс прогресі" aria-valuenow="${p.percent}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:${p.percent}%"></div></div><div class="summary-item"><span>Деңгей</span><strong>Бастапқы</strong></div><div class="summary-item"><span>Тіл</span><strong>Қазақша</strong></div><div class="summary-item"><span>Көлемі</span><strong>${course.lessons.length} сабақ</strong></div><div class="summary-item"><span>Жалпы тәжірибе</span><strong>${course.lessons.reduce((n,l) => n+l.xp,0)} XP</strong></div><a class="btn btn-primary w-100 mt-4" href="#lesson/${next.id}">${icon('play')}${p.completed ? 'Жалғастыру' : 'Бастау'}</a><p class="mt-3" style="font-size:9px;text-align:center">Тегін демо курс · Өз қарқыныңмен үйрен</p></aside></div>`);
 }
 function lessonPage(id) {
   const lesson = findLesson(id), course = findCourse(id);
   if (!lesson || !course) return notFound();
-  const n = course.lessons.indexOf(lesson);
-  const completed = state.completed.includes(id);
-  return shell('lesson', `<a href="#course/${course.id}" class="header-back">${icon('arrow-left')}${esc(course.title)}</a><div class="lesson-layout"><article class="panel lesson-content"><div class="lesson-meta"><span>${n+1} / ${course.lessons.length} САБАҚ</span><span>${lesson.minutes} МИНУТ</span><span class="yellow-text">+${lesson.xp} XP</span></div><h2>${esc(lesson.title)}</h2>${lesson.body.map(p => `<p>${esc(p)}</p>`).join('')}<pre class="code-block"><code>${esc(lesson.example)}</code></pre><a href="#workspace/${lesson.id}" class="btn btn-outline">${icon('code-2')}Код алаңында ашу</a><h3>Біліміңді бекіт</h3><p>${esc(lesson.question)}</p><form id="quiz-form" data-lesson="${lesson.id}">${lesson.options.map((o,i) => `<label class="quiz-option"><input type="radio" name="answer" value="${i}" required>${esc(o)}</label>`).join('')}<div id="quiz-feedback" aria-live="polite" class="mt-3">${completed ? '<div class="notice success">Бұл сабақ аяқталған. Біліміңді қайта тексере аласың.</div>' : ''}</div><button class="btn btn-primary mt-3" type="submit">${icon('check')}Жауапты тексеру</button></form><div class="d-flex justify-content-between gap-2 mt-4 pt-4" style="border-top:1px solid #26354d">${n > 0 ? `<a class="btn btn-outline" href="#lesson/${course.lessons[n-1].id}">${icon('arrow-left')}Алдыңғы сабақ</a>` : '<span></span>'}${n < course.lessons.length-1 ? `<a class="btn btn-quiet" href="#lesson/${course.lessons[n+1].id}">Келесі сабақ${icon('arrow-right')}</a>` : `<a class="btn btn-quiet" href="#course/${course.id}">Курсқа оралу${icon('arrow-right')}</a>`}</div></article><aside class="panel lesson-toc"><h3>Курс мазмұны</h3>${course.lessons.map((l,i) => `<a href="#lesson/${l.id}" class="${l.id === id ? 'active' : ''}">${icon(state.completed.includes(l.id) ? 'check-circle' : 'circle')}<span>${i+1}. ${esc(l.title)}</span></a>`).join('')}</aside></div>`);
+  return shell('lesson',renderLesson(lesson,course,state.completed.includes(id)));
 }
-function workspacePage(id) {
+function workspacePage(id,exerciseIndex) {
   const lesson = findLesson(id) || currentLesson();
   const course = findCourse(lesson.id);
-  activeEditorLesson = lesson.id;
-  const draft = state.drafts[lesson.id] ?? lesson.starter;
-  return shell('workspace', `${heading('Идеяңды кодқа айналдыр.','Жаттығуды оқы, код жаз және нұсқаңды сақта.','КОД АЛАҢЫ')}<div class="workspace"><aside class="panel task-panel"><span class="tag">${esc(course.language)} · Бастапқы деңгей</span><h2>${esc(lesson.title)}</h2><p>${esc(lesson.task)}</p><h3 style="font-size:13px;margin:24px 0 9px">Көмек керек пе?</h3><p>Сабақтағы түсіндірмені және код мысалын қайта қарап шық.</p><a href="#lesson/${lesson.id}" class="btn btn-outline mt-3 w-100">${icon('book-open')}Сабақты ашу</a><div class="notice gold mt-4">${icon('info')}<div>Код редакторы — жаттығу нобайы. Кодты орындау мен автоматты тесттер үшін оқшауланған сервер әлі қосылмаған.</div></div></aside><section class="panel editor-panel" aria-label="Код редакторы"><div class="editor-toolbar"><select class="form-select" id="editor-language" aria-label="Бағдарламалау тілі">${courses.map(c => `<option value="${c.id}" ${c.id === course.id ? 'selected' : ''}>${esc(c.language)}</option>`).join('')}</select><span>${course.id === 'python' ? 'main.py' : 'Main.java'}</span><button class="icon-btn" data-action="reset-code" aria-label="Бастапқы кодқа қайтару" title="Бастапқы код">${icon('rotate-ccw')}</button></div><div class="editor-wrap"><div class="line-numbers" aria-hidden="true">${Array.from({length:15},(_,i) => i+1).join('\n')}</div><textarea id="code-editor" class="code-editor" spellcheck="false" autocapitalize="off" aria-label="${esc(course.language)} кодын жазу">${esc(draft)}</textarea></div><div class="editor-actions"><button class="btn btn-outline" data-action="save-code">${icon('save')}Нобайды сақтау</button><button class="btn btn-quiet" data-action="run-code">${icon('play')}Іске қосу</button><button class="btn btn-primary" data-action="submit-code">${icon('send')}Шешімді жіберу</button></div><div class="console-header">${icon('terminal')}Нәтиже<div class="code-status ms-auto"><i></i>Орындау сервисі қосылмаған</div></div><div id="console-output" class="console-body" role="status" aria-live="polite">Кодты жазып, нобайын осы браузерде сақтауға болады.\nОрындау сервисі қосылғанда нәтиже осы жерде көрсетіледі.</div></section></div>`);
+  const task = workspaceTask(lesson,course,exerciseIndex);
+  activeEditorLesson = task.draftKey;
+  activeEditorStarter = task.starter;
+  const draft = state.drafts[task.draftKey] ?? task.starter;
+  return shell('workspace', `${heading('Идеяңды кодқа айналдыр.','Жаттығуды оқы, шешім қадамдарын ойластыр және кодыңды жаз.','КОД АЛАҢЫ')}
+    <div class="workspace">
+      <aside class="panel task-panel">
+        <span class="tag">${esc(course.language)} · ${task.index >= 0 ? 'Жаттығу '+(task.index+1) : 'Негізгі тапсырма'}</span>
+        <h2>${esc(task.title)}</h2><p>${esc(task.description)}</p>
+        ${task.input ? `<div class="task-output"><strong>Енгізілетін мәндер</strong><pre>${esc(task.input)}</pre></div>` : ''}
+        ${task.output !== undefined ? `<div class="task-output"><strong>Күтілетін нәтиже</strong><pre>${esc(task.output)}</pre></div>` : ''}
+        ${task.hint ? `<details class="lesson-disclosure mt-3"><summary>${icon('lightbulb')}Ишараны көру</summary><div class="disclosure-content"><p>${esc(task.hint)}</p></div></details>` : ''}
+        <a href="#lesson/${lesson.id}" class="btn btn-outline mt-3 w-100">${icon('book-open')}Теория мен мысалдарға оралу</a>
+        <div class="notice gold mt-4">${icon('info')}<div>Код нобайын сақтауға болады. Кодты орындау мен автоматты тесттер үшін оқшауланған сервер әлі қосылмаған.</div></div>
+      </aside>
+      <section class="panel editor-panel" aria-label="Код редакторы">
+        <div class="editor-toolbar">
+          <select class="form-select" id="editor-language" aria-label="Бағдарламалау тілі">${courses.map(c=>`<option value="${c.id}" ${c.id===course.id ? 'selected' : ''}>${esc(c.language)}</option>`).join('')}</select>
+          <span>${course.id==='python' ? 'main.py' : 'Main.java'}</span>
+          <button class="icon-btn" data-action="reset-code" aria-label="Бастапқы кодқа қайтару" title="Бастапқы код">${icon('rotate-ccw')}</button>
+        </div>
+        <div class="exercise-picker"><label for="editor-exercise">Осы тақырыптың жаттығулары</label><select class="form-select" id="editor-exercise"><option value="${lesson.id}" ${task.index===-1 ? 'selected' : ''}>Негізгі тапсырма</option>${(lesson.practice || []).map((p,i)=>`<option value="${lesson.id}/${i}" ${task.index===i ? 'selected' : ''}>${i+1}. ${esc(p.title)}</option>`).join('')}</select></div>
+        <div class="editor-wrap"><div class="line-numbers" aria-hidden="true">${Array.from({length:Math.max(15,draft.split('\n').length)},(_,i)=>i+1).join('\n')}</div><textarea id="code-editor" class="code-editor" spellcheck="false" autocapitalize="off" aria-label="${esc(course.language)} кодын жазу">${esc(draft)}</textarea></div>
+        <div class="editor-actions"><button class="btn btn-outline" data-action="save-code">${icon('save')}Нобайды сақтау</button><button class="btn btn-quiet" data-action="run-code">${icon('play')}Іске қосу</button><button class="btn btn-primary" data-action="submit-code">${icon('send')}Шешімді жіберу</button></div>
+        <div class="console-header">${icon('terminal')}Нәтиже<div class="code-status ms-auto"><i></i>Орындау сервисі қосылмаған</div></div><div id="console-output" class="console-body" role="status" aria-live="polite">Кодыңды жазып, өзің болжаған нәтижемен салыстыр.\nӘр жаттығудың нобайы осы браузерде бөлек сақталады.</div>
+      </section>
+    </div>`);
 }
 function battlesPage() {
   return shell('battles', `${heading('Бірге кодта. Бірге шыңдал.','Достық бәсеке арқылы үйренудің жаңа форматы.','ШАЙҚАС АЛАҢЫ')}<div class="notice mb-4">${icon('info')}Бұл — шайқас режимдерінің таныстырылымы. Нақты қарсылас, бөлме және онлайн матч сервер қосылғанда қолжетімді болады.</div><div class="mode-grid"><button class="panel mode-card ${battleMode === '1v1' ? 'selected' : ''}" data-mode="1v1" aria-pressed="${battleMode === '1v1'}"><div class="mode-icon">${icon('swords')}</div><h3>1 vs 1</h3><p>Бір тапсырма. Екі бағдарламашы.<br>Дұрыс шешімге бірінші жеткен ойыншы жеңеді.</p><span class="mode-label">ЖЕКЕ ДУЭЛЬ · 2 ОЙЫНШЫ</span></button><button class="panel mode-card ${battleMode === '2v2' ? 'selected' : ''}" data-mode="2v2" aria-pressed="${battleMode === '2v2'}"><div class="mode-icon">${icon('users')}</div><h3>2 vs 2</h3><p>Досыңмен команда құрып, қарсыласқа жолық.<br>Командадағы алғашқы дұрыс шешім жеңіс әкеледі.</p><span class="mode-label">КОМАНДАЛЫҚ ОЙЫН · 4 ОЙЫНШЫ</span></button></div><section class="panel battle-config"><h3>Өз форматыңды таңда</h3><div class="row g-3 align-items-end"><div class="col-md-4"><label class="form-label" for="battle-language">Бағдарламалау тілі</label><select id="battle-language" class="form-select"><option value="python">Python</option><option value="java">Java</option></select></div><div class="col-md-4"><label class="form-label" for="battle-level">Қиындық деңгейі</label><select id="battle-level" class="form-select"><option>Бастапқы деңгей</option><option disabled>Орта деңгей — жақында</option></select></div><div class="col-md-4"><button class="btn btn-primary w-100" data-action="battle-preview">${icon('swords')}${battleMode} форматын көру</button></div></div></section><section class="panel battle-rules"><h3>Шайқас қалай өтеді?</h3><ol class="mb-0 ps-3"><li>Жеке бөлмеге досыңды шақырасың.</li><li>Барлық ойыншы бірдей тапсырманы бір уақытта алады.</li><li>Шешімдер сервердегі жасырын тесттермен тексеріледі.</li><li>2v2 режимінде әркім өз кодын жазады. Командадағы бір ойыншының дұрыс шешімі жеткілікті.</li></ol></section>`);
@@ -167,8 +192,8 @@ function notFound() {
 function render({ saveEditor = true } = {}) {
   if (saveEditor && document.querySelector('#code-editor') && activeEditorLesson) saveDraft(false);
   activeEditorLesson = null;
-  const [page = 'dashboard', id] = route();
-  const views = { dashboard, home:landingPage, courses:courseCatalog, course:() => courseDetail(id), lesson:() => lessonPage(id), workspace:() => workspacePage(id), battles:battlesPage, friends:friendsPage, leaderboard:leaderboardPage, profile:profilePage, settings:settingsPage, login:() => authPage(false), register:() => authPage(true) };
+  const [page = 'dashboard', id, exerciseIndex] = route();
+  const views = { dashboard, home:landingPage, courses:courseCatalog, course:() => courseDetail(id), lesson:() => lessonPage(id), workspace:() => workspacePage(id,exerciseIndex), battles:battlesPage, friends:friendsPage, leaderboard:leaderboardPage, profile:profilePage, settings:settingsPage, login:() => authPage(false), register:() => authPage(true) };
   app.innerHTML = (views[page] || notFound)();
   app.querySelector('.mobile-menu')?.insertAdjacentHTML('afterend',brand());
   app.querySelector('#main')?.setAttribute('tabindex','-1');
@@ -183,6 +208,23 @@ function saveDraft(feedback = true) {
   if (feedback) toast('Код нобайы осы браузерде сақталды.');
 }
 document.addEventListener('click', event => {
+  const sectionLink = event.target.closest('[data-section]');
+  if (sectionLink) {
+    event.preventDefault();
+    const section = document.getElementById(sectionLink.dataset.section);
+    if (section) { section.setAttribute('tabindex','-1'); section.focus({preventScroll:true}); section.scrollIntoView({behavior:'instant',block:'start'}); }
+    return;
+  }
+  const copyButton = event.target.closest('[data-copy-code]');
+  if (copyButton) {
+    event.preventDefault();
+    const code = document.getElementById(copyButton.dataset.copyCode)?.textContent;
+    if (code !== undefined) {
+      if (!navigator.clipboard?.writeText) { toast('Кодты белгілеп, Ctrl+C арқылы көшір.'); return; }
+      navigator.clipboard.writeText(code).then(()=>toast('Код көшірілді.')).catch(()=>toast('Кодты белгілеп, Ctrl+C арқылы көшір.'));
+    }
+    return;
+  }
   if (event.target.closest('.skip-link')) { event.preventDefault(); document.querySelector('#main')?.focus(); return; }
   const filter = event.target.closest('[data-filter]');
   if (filter) { courseFilter = filter.dataset.filter; render(); return; }
@@ -199,7 +241,7 @@ document.addEventListener('click', event => {
     document.querySelector('.mobile-overlay')?.classList.toggle('show', open);
     document.querySelector('.mobile-menu')?.setAttribute('aria-expanded', String(open));
   }
-  if (action === 'help') openModal('Көмек орталығы', '<p>Курсты таңда, сабақты оқы және соңындағы сұраққа жауап бер. Дұрыс жауаптан кейін тәжірибе ұпайы бір рет беріледі.</p><p class="mt-3">Код алаңындағы нобайыңды сақтауға болады. Аккаунттар, код орындау және онлайн шайқастар келесі кезеңде қосылады.</p><a class="btn btn-primary" href="#courses" data-action="modal-courses">Курстарды ашу</a>', 'circle-help');
+  if (action === 'help') openModal('Көмек орталығы', '<p>Курсты таңда, сабақты оқы және соңындағы барлық сұраққа жауап бер. Дұрыс жауаптан кейін тәжірибе ұпайы бір рет беріледі.</p><p class="mt-3">Код алаңындағы нобайыңды сақтауға болады. Аккаунттар, код орындау және онлайн шайқастар келесі кезеңде қосылады.</p><a class="btn btn-primary" href="#courses" data-action="modal-courses">Курстарды ашу</a>', 'circle-help');
   if (action === 'modal-courses') { modal.close(); location.hash = 'courses'; }
   if (action === 'notifications') openModal('Жаңа жолға қош келдің!', '<p>Сенің алғашқы сабағың дайын. Өзіңе ыңғайлы тілді таңдап, бүгін бір қадам жаса.</p><p class="mt-3">Бұл — құрылғыда сақталатын демо нұсқа. Жеке хабарламалар сервисі әзірге қосылмаған.</p><a class="btn btn-primary" href="#courses" data-action="modal-courses">Курс таңдау</a>', 'bell');
   if (action === 'search') {
@@ -213,9 +255,8 @@ document.addEventListener('click', event => {
     openModal('Кодты бастапқы түріне қайтару', '<p>Осы жаттығуда жазған нобайың бастапқы үлгімен ауыстырылады.</p><button class="btn btn-primary" data-action="confirm-reset-code">Бастапқы үлгіге қайтару</button>', 'rotate-ccw');
   }
   if (action === 'confirm-reset-code') {
-    const lesson = findLesson(activeEditorLesson);
     const editor = document.querySelector('#code-editor');
-    if (lesson && editor) { editor.value = lesson.starter; saveDraft(false); toast('Бастапқы код қайтарылды.'); }
+    if (editor && activeEditorLesson) { editor.value = activeEditorStarter; saveDraft(false); toast('Бастапқы код қайтарылды.'); }
     modal.close();
   }
   if (action === 'run-code' || action === 'submit-code') {
@@ -241,19 +282,32 @@ document.addEventListener('submit', event => {
   if (event.target.id === 'quiz-form') {
     event.preventDefault();
     const lesson = findLesson(event.target.dataset.lesson);
-    const value = new FormData(event.target).get('answer');
-    let feedback = document.querySelector('#quiz-feedback');
-    if (value === null) return;
-    if (Number(value) !== lesson.answer) { feedback.innerHTML = '<div class="notice gold">Әзірге дұрыс емес. Мысалды қайта қарап, тағы бір рет байқап көр.</div>'; return; }
+    const form = new FormData(event.target);
+    const answers = lessonChecks(lesson).map((_,i)=>form.get('answer-'+i));
+    const grade = gradeLesson(lesson,answers);
     const already = state.completed.includes(lesson.id);
-    persist(completeLesson(state, lesson.id, lesson.xp));
-    const position = window.scrollY;
-    render();
-    window.scrollTo(0,position);
-    feedback = document.querySelector('#quiz-feedback');
-    feedback.innerHTML = `<div class="notice success">${icon('check-circle')}<div><strong>Дұрыс жауап! ${already ? 'Сабақ бұрын аяқталған.' : `+${lesson.xp} XP`}</strong><br>${esc(lesson.explanation)}</div></div>`;
+    if (grade.allCorrect) {
+      persist(completeLesson(state,lesson.id,lesson.xp));
+      const position = window.scrollY;
+      render();
+      window.scrollTo(0,position);
+    }
+    grade.results.forEach((result,i)=>{
+      const question=document.querySelector('#question-'+i), feedback=document.querySelector('#question-feedback-'+i);
+      question.classList.toggle('answer-correct',result.correct);
+      question.classList.toggle('answer-incorrect',!result.correct);
+      if (result.selected !== null) {
+        const radio=question.querySelector('input[value="'+result.selected+'"]');
+        if (radio) radio.checked=true;
+      }
+      feedback.textContent = result.selected === null ? 'Жауапты таңда.' : (result.correct ? 'Дұрыс! ' : 'Қайта ойланып көр. ')+result.explanation;
+    });
+    const feedback = document.querySelector('#quiz-feedback');
+    feedback.innerHTML = grade.allCorrect
+      ? `<div class="notice success">${icon('check-circle')}<div><strong>${grade.correct}/${grade.total} — барлығы дұрыс!</strong><br>${already ? 'Бұл сабақтың XP ұпайы бұрын берілген. Қайталау біліміңді бекітеді.' : 'Сабақ аяқталды. +'+lesson.xp+' XP'}</div></div>`
+      : `<div class="notice gold">${icon('info')}<div><strong>${grade.correct}/${grade.total} дұрыс жауап.</strong><br>Түсіндірмелерді оқып, қате жауаптарды түзет. Сабақты аяқтау үшін барлық сұраққа дұрыс жауап беру керек.</div></div>`;
     updateIcons();
-    toast(already ? 'Білімді қайталау пайдалы. Бұл сабақтың XP ұпайы бұрын берілген.' : `Керемет! Сабақ аяқталды. +${lesson.xp} XP`);
+    if (grade.allCorrect) toast(already ? 'Тақырыпты сәтті қайталадың. Қосымша XP берілмейді.' : 'Сабақ толық аяқталды. +'+lesson.xp+' XP');
   }
   if (event.target.id === 'settings-form') {
     event.preventDefault();
@@ -277,6 +331,7 @@ document.addEventListener('input', event => {
   }
 });
 document.addEventListener('change', event => {
+  if (event.target.id === 'editor-exercise') { saveDraft(false); location.hash='workspace/'+event.target.value; }
   if (event.target.id === 'editor-language') {
     saveDraft(false);
     location.hash = `workspace/${courses.find(c => c.id === event.target.value).lessons[0].id}`;

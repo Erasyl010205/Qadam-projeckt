@@ -1,3 +1,6 @@
+import { pythonContent } from './content/python.js';
+import { javaContent } from './content/java.js';
+
 // Public lesson content. These are knowledge checks, not hidden code test cases.
 export const courses = [
   {
@@ -159,6 +162,22 @@ export const courses = [
     ]
   }
 ];
+
+// Stable IDs retain existing local progress and drafts when content is expanded.
+const detailedContent = { ...pythonContent, ...javaContent };
+for (const course of courses) {
+  for (const lesson of course.lessons) {
+    Object.assign(lesson,detailedContent[lesson.id] || {});
+    lesson.practice = (lesson.practice || []).map(exercise=>({
+      ...exercise,title:exercise.title.replace(/^\d+\.\s*/,'')
+    }));
+  }
+  const minutes = course.lessons.reduce((total,lesson)=>total+lesson.minutes,0);
+  course.duration = Math.floor(minutes/60)+' сағ '+minutes%60+' мин';
+  course.description = course.id === 'python'
+    ? 'Python-ды түсініп үйрен: толық теория, қадамдап талданған мысалдар және шешімі бар жаттығулар.'
+    : 'Java негіздерін меңгер: дерек типтерінен объектілер мен алгоритмдерге дейінгі толық түсіндірме.';
+}
 
 // Explicitly illustrative people. Never merge with a real server leaderboard.
 export const demoLeaders = [

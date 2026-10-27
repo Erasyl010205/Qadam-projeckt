@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "check": "node --check dist/app.js && node --check dist/data.js && node --check dist/state.js && node --test scripts/state.test.mjs"
+    "check": "node --check dist/app.js && node --check dist/data.js && node --check dist/state.js && node --check dist/learning.js && node --check dist/lesson-view.js && node --check dist/content/python.js && node --check dist/content/java.js && node --test scripts/state.test.mjs scripts/learning.test.mjs scripts/content.test.mjs",
+    "verify:examples": "node scripts/verify-examples.mjs"
   }
 }

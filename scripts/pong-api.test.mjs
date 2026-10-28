@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep, basename } from 'node:path';
 import { openLocalD1 } from '../server/sqlite-d1.js';
 import { handlePongRequest } from '../server/pong-api.js';
+import { createPongState, startPong, advancePong } from '../public/pong-engine.js';
 
 const schema = `CREATE TABLE pong_rooms (
   code TEXT PRIMARY KEY, version INTEGER NOT NULL DEFAULT 0,
@@ -46,6 +47,45 @@ async function stored(ctx, code) {
 
 function near(actual, expected) {
   assert.ok(Math.abs(actual - expected) < 1e-7, `${actual} should equal ${expected}`);
+}
+
+async function stageRally(ctx, code) {
+  const { room } = await stored(ctx, code);
+  room.state = startPong(createPongState(123));
+  room.state.serveRemaining = 0;
+  room.state.ball.x = 100;
+  room.state.ball.vx = 340;
+  room.updatedAt = ctx.now;
+  room.paused = false;
+  await ctx.db.prepare('UPDATE pong_rooms SET data = ?, version = version + 1 WHERE code = ?').bind(JSON.stringify(room), code).run();
+  return structuredClone(room.state);
+}
+
+// Delays and concurrent writes are injected around actual SQLite statements,
+// preserving the same compare-and-swap behavior as asynchronous production D1.
+function observedBinding(ctx, hooks = {}) {
+  const binding = {
+    withSession() { return binding; },
+    prepare(sql) {
+      return { bind(...values) {
+        const prepared = ctx.db.prepare(sql).bind(...values);
+        return {
+          async first() {
+            const row = await prepared.first();
+            await hooks.afterRead?.(sql, row);
+            return row;
+          },
+          async run() {
+            await hooks.beforeWrite?.(sql, values);
+            const result = await prepared.run();
+            await hooks.afterWrite?.(sql, result);
+            return result;
+          },
+        };
+      } };
+    },
+  };
+  return binding;
 }
 
 test('local adapter binds real SQLite values and reports D1 CAS change counts', async t => {
@@ -134,6 +174,115 @@ test('both clients share server paddle movement and stale input sequences cannot
   near(continued.body.state.paddles.left.y, 354);
   near(continued.body.state.paddles.right.y, 186);
   assert.equal((await stored(ctx, code)).room.players.left.direction, 1);
+});
+
+test('a 500 ms polling gap advances the same rally as two 250 ms polls without losing time', async t => {
+  const whole = fixture(t);
+  const split = fixture(t);
+  const a = await pair(whole);
+  const b = await pair(split);
+  await stageRally(whole, a.code);
+  await stageRally(split, b.code);
+  whole.now += 500;
+  const onePoll = await call(whole, `/${a.code}`, { method: 'GET', token: a.host.token });
+  split.now += 250;
+  await call(split, `/${b.code}`, { method: 'GET', token: b.host.token });
+  split.now += 250;
+  const twoPolls = await call(split, `/${b.code}`, { method: 'GET', token: b.host.token });
+  assert.equal(onePoll.status, 200);
+  assert.deepEqual(onePoll.body.state, twoPolls.body.state);
+  near(onePoll.body.state.ball.x, 270);
+  assert.equal(onePoll.body.state.tick, 60);
+  assert.equal(onePoll.body.simulationTime, whole.now);
+  assert.equal((await stored(whole, a.code)).room.updatedAt, whole.now);
+});
+
+test('the two-second work cap carries remaining simulation time into the next request', async t => {
+  const ctx = fixture(t);
+  const game = await pair(ctx);
+  const initial = await stageRally(ctx, game.code);
+  const baseline = ctx.now;
+  ctx.now += 2500;
+  const limited = await call(ctx, `/${game.code}`, { method: 'GET', token: game.host.token });
+  assert.equal(limited.body.paused, false, 'a gap under three seconds must retain its elapsed simulation');
+  assert.equal(limited.body.simulationTime, baseline + 2000);
+  assert.equal(limited.body.serverTime, baseline + 2500);
+  assert.equal(limited.body.state.tick, 240);
+  const caughtUp = await call(ctx, `/${game.code}`, { method: 'GET', token: game.guest.token });
+  assert.equal(caughtUp.body.simulationTime, baseline + 2500);
+  assert.equal(caughtUp.body.state.tick, 300);
+  let expected = initial;
+  for (let i = 0; i < 10; i += 1) expected = advancePong(expected, {}, 0.25);
+  assert.deepEqual(caughtUp.body.state, expected);
+});
+
+test('snapshots use the post-read clock and expose safe simulation age and accepted controls', async t => {
+  const ctx = fixture(t);
+  const game = await pair(ctx);
+  await call(ctx, `/${game.code}/sync`, { token: game.host.token, body: { direction: 0.25, seq: 1 } });
+  await call(ctx, `/${game.code}/sync`, { token: game.guest.token, body: { direction: -0.25, seq: 1 } });
+  await stageRally(ctx, game.code);
+  const baseline = ctx.now;
+  const binding = observedBinding(ctx, {
+    afterRead(sql) { if (sql.startsWith('SELECT code, version')) ctx.now = baseline + 500; },
+    afterWrite(sql) { if (sql.startsWith('UPDATE pong_rooms')) ctx.now = baseline + 650; },
+  });
+  const snapshot = await call(ctx, `/${game.code}`, { method: 'GET', token: game.host.token, binding });
+  assert.equal(snapshot.status, 200);
+  near(snapshot.body.state.ball.x, 270);
+  assert.equal(snapshot.body.simulationTime, baseline + 500);
+  assert.equal(snapshot.body.serverTime, baseline + 650, 'response timestamp must include the storage write delay');
+  assert.deepEqual(snapshot.body.inputs, { left: 0.25, right: -0.25 });
+  assert.equal(snapshot.body.ackSeq, 1);
+  assert.equal(snapshot.body.token, undefined);
+  assert.ok(!JSON.stringify(snapshot.body).includes('"hash"'));
+});
+
+test('a CAS retry re-reads the clock without replaying time or rewinding stored timestamps', async t => {
+  const ctx = fixture(t);
+  const game = await pair(ctx);
+  const initial = await stageRally(ctx, game.code);
+  const baseline = ctx.now;
+  ctx.now += 100;
+  let reads = 0;
+  let interfered = false;
+  let failedCas = 0;
+  const binding = observedBinding(ctx, {
+    afterRead(sql) {
+      if (!sql.startsWith('SELECT code, version')) return;
+      reads += 1;
+      ctx.now = baseline + (reads === 1 ? 500 : 800);
+    },
+    async beforeWrite(sql) {
+      if (!sql.startsWith('UPDATE pong_rooms') || interfered) return;
+      interfered = true;
+      const current = await stored(ctx, game.code);
+      current.room.state = advancePong(advancePong(current.room.state, {}, 0.25), {}, 0.25);
+      current.room.updatedAt = baseline + 500;
+      current.room.players.right.lastSeen = baseline + 500;
+      await ctx.db.prepare('UPDATE pong_rooms SET data = ?, version = version + 1, expires_at = ? WHERE code = ?')
+        .bind(JSON.stringify(current.room), baseline + 500 + 1800000, game.code).run();
+      ctx.now = baseline + 700;
+    },
+    afterWrite(sql, result) {
+      if (!sql.startsWith('UPDATE pong_rooms')) return;
+      if (result.meta.changes === 0) failedCas += 1;
+      else ctx.now = baseline + 900;
+    },
+  });
+  const snapshot = await call(ctx, `/${game.code}`, { method: 'GET', token: game.host.token, binding });
+  assert.equal(snapshot.status, 200);
+  assert.equal(failedCas, 1);
+  assert.equal(reads, 2);
+  assert.equal(snapshot.body.simulationTime, baseline + 800);
+  assert.equal(snapshot.body.serverTime, baseline + 900);
+  const expected = advancePong(advancePong(advancePong(advancePong(initial, {}, 0.25), {}, 0.25), {}, 0.25), {}, 0.05);
+  assert.deepEqual(snapshot.body.state, expected);
+  const saved = await stored(ctx, game.code);
+  assert.equal(saved.room.updatedAt, baseline + 800);
+  assert.equal(saved.room.players.left.lastSeen, baseline + 800);
+  assert.equal(saved.room.players.right.lastSeen, baseline + 500);
+  assert.equal(saved.row.expires_at, baseline + 800 + 1800000);
 });
 
 test('input bounds and sequence validation reject changes and clients cannot author scores', async t => {

@@ -5,6 +5,7 @@ const ROOM_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
 const ROOM_TTL = 30 * 60 * 1000;
 const CONNECTED_FOR = 3000;
 const MAX_BODY = 1024;
+const MAX_CATCH_UP = 2000;
 
 class ApiError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
@@ -74,15 +75,18 @@ function publicRoom(row, room, side, now, token) {
   }
   return {
     code: row.code, side, ...(token ? { token } : {}), state: room.state, rules: PONG_RULES,
-    players, paused: room.paused, serverTime: now, ackSeq: room.players[side].seq,
+    players, paused: room.paused, simulationTime: room.updatedAt, serverTime: now,
+    inputs: { left: room.players.left?.direction || 0, right: room.players.right?.direction || 0 },
+    ackSeq: room.players[side].seq,
     version: row.version, round: room.round, expiresAt: row.expires_at
   };
 }
 
-async function createRoom(db, request, input, now) {
+async function createRoom(db, request, input, clock) {
   const name = nameOf(input.name);
   const identity = request.headers.get('cf-connecting-ip') || request.headers.get('oai-authenticated-user-id') || 'local';
   const creator = await digest(identity);
+  const now = clock();
   const count = await db.prepare('SELECT COUNT(*) AS total FROM pong_rooms WHERE creator_key = ? AND created_at > ?').bind(creator, now - 60000).first();
   if (Number(count?.total) >= 6) throw new ApiError(429, 'CREATE_LIMIT', 'Бір минуттан кейін жаңа бөлме ашып көр.');
   await db.prepare('DELETE FROM pong_rooms WHERE code IN (SELECT code FROM pong_rooms WHERE expires_at < ? LIMIT 20)').bind(now).run();
@@ -90,12 +94,23 @@ async function createRoom(db, request, input, now) {
   const hash = await digest(token);
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = randomCode();
-    const room = { state: createPongState(seed()), players: { left: player(name, hash, now), right: null }, updatedAt: now, paused: false, round: 1 };
+    const createdAt = clock();
+    const expiresAt = createdAt + ROOM_TTL;
+    const room = { state: createPongState(seed()), players: { left: player(name, hash, createdAt), right: null }, updatedAt: createdAt, paused: false, round: 1 };
     const result = await db.prepare('INSERT OR IGNORE INTO pong_rooms (code, version, data, created_at, expires_at, creator_key) VALUES (?, 0, ?, ?, ?, ?)')
-      .bind(code, JSON.stringify(room), now, now + ROOM_TTL, creator).run();
-    if (changes(result) === 1) return json(publicRoom({ code, version: 0, expires_at: now + ROOM_TTL }, room, 'left', now, token), 201);
+      .bind(code, JSON.stringify(room), createdAt, expiresAt, creator).run();
+    if (changes(result) === 1) return json(publicRoom({ code, version: 0, expires_at: expiresAt }, room, 'left', clock(), token), 201);
   }
   throw new ApiError(503, 'CREATE_BUSY', 'Бөлме ашылмады. Қайта көр.');
+}
+
+function resumeRoom(room, now) {
+  room.state.serveRemaining = PONG_RULES.servePause;
+  Object.assign(room.state.ball, {
+    x: PONG_RULES.width / 2, y: PONG_RULES.height / 2,
+    vx: 0, vy: 0, speed: PONG_RULES.ballSpeed
+  });
+  room.updatedAt = Math.max(now, room.updatedAt);
 }
 
 function advanceRoom(room, now) {
@@ -103,21 +118,32 @@ function advanceRoom(room, now) {
   const paused = room.state.phase === 'playing' && !bothPresent;
   if (room.state.phase === 'playing' && !paused) {
     if (room.paused) {
-      room.state.serveRemaining = PONG_RULES.servePause;
-      room.state.ball.x = PONG_RULES.width / 2;
-      room.state.ball.y = PONG_RULES.height / 2;
+      resumeRoom(room, now);
     }
-    const seconds = room.paused ? 0 : Math.min(0.25, Math.max(0, (now - room.updatedAt) / 1000));
-    room.state = advancePong(room.state, {
+    let remaining = Math.min(MAX_CATCH_UP, Math.max(0, now - room.updatedAt));
+    const simulatedUntil = room.updatedAt + remaining;
+    const inputs = {
       left: room.players.left?.direction || 0,
       right: room.players.right?.direction || 0
-    }, seconds);
+    };
+    // The engine caps each call at 250 ms. Consume the elapsed clock in chunks
+    // instead of silently discarding everything after the first capped call.
+    while (remaining > 0) {
+      const milliseconds = Math.min(PONG_RULES.maxFrameTime * 1000, remaining);
+      room.state = advancePong(room.state, inputs, milliseconds / 1000);
+      remaining -= milliseconds;
+    }
+    // Carry any work beyond the per-request cap into the next request. This is
+    // also the timestamp clients use to measure the true age of the snapshot.
+    room.updatedAt = simulatedUntil;
+  } else {
+    // Waiting/finished games and a real disconnect intentionally freeze physics.
+    room.updatedAt = Math.max(now, room.updatedAt);
   }
   room.paused = paused;
-  room.updatedAt = Math.max(now, room.updatedAt);
 }
 
-async function updateRoom(db, code, request, action, input, now) {
+async function updateRoom(db, code, request, action, input, clock) {
   const isJoin = action === 'join';
   const joinName = isJoin ? nameOf(input.name) : null;
   const token = isJoin ? randomHex() : request.headers.get('authorization')?.match(/^Bearer ([a-f0-9]{48})$/)?.[1];
@@ -125,9 +151,13 @@ async function updateRoom(db, code, request, action, input, now) {
   const tokenHash = await digest(token);
   for (let attempt = 0; attempt < 5; attempt++) {
     const row = await db.prepare('SELECT code, version, data, expires_at FROM pong_rooms WHERE code = ?').bind(code).first();
+    const readTime = clock();
     if (!row) throw new ApiError(404, 'ROOM_NOT_FOUND', 'Бөлме табылмады. Кодты тексер.');
-    if (row.expires_at < now) throw new ApiError(410, 'ROOM_EXPIRED', 'Бөлменің уақыты аяқталды. Жаңа бөлме аш.');
+    if (row.expires_at < readTime) throw new ApiError(410, 'ROOM_EXPIRED', 'Бөлменің уақыты аяқталды. Жаңа бөлме аш.');
     const room = JSON.parse(row.data);
+    // Sample after every D1 read, including CAS retries. Another request may
+    // already have advanced this room beyond this request's arrival time.
+    const now = Math.max(readTime, room.updatedAt, room.players.left?.lastSeen || 0, room.players.right?.lastSeen || 0);
     let side;
     if (isJoin) {
       if (room.players.right) throw new ApiError(409, 'ROOM_FULL', 'Бұл бөлмеде екі ойыншы бар.');
@@ -160,6 +190,7 @@ async function updateRoom(db, code, request, action, input, now) {
         p.ready = true;
         if (room.players.left.ready && room.players.right?.ready) {
           room.state = startPong(createPongState(seed()));
+          room.updatedAt = now;
           for (const entry of Object.values(room.players)) { entry.ready = false; entry.direction = 0; }
           room.round++;
           room.paused = false;
@@ -169,23 +200,22 @@ async function updateRoom(db, code, request, action, input, now) {
         room.players.left.direction = 0;
         room.players.left.ready = false;
         room.state = createPongState(seed());
+        room.updatedAt = now;
         room.paused = false;
         room.round++;
       }
       // A returning player triggers a fresh countdown on the next accepted sync.
       if (room.paused && connected(room.players.left, now) && connected(room.players.right, now)) {
         room.paused = false;
-        room.state.serveRemaining = PONG_RULES.servePause;
-        room.state.ball.x = PONG_RULES.width / 2;
-        room.state.ball.y = PONG_RULES.height / 2;
+        resumeRoom(room, now);
       }
     }
-    const expiresAt = now + ROOM_TTL;
+    const expiresAt = Math.max(row.expires_at, now + ROOM_TTL);
     const saved = await db.prepare('UPDATE pong_rooms SET data = ?, version = version + 1, expires_at = ? WHERE code = ? AND version = ?')
       .bind(JSON.stringify(room), expiresAt, code, row.version).run();
     if (changes(saved)) {
       if (action === 'leave') return json({ left: true });
-      return json(publicRoom({ code, version: row.version + 1, expires_at: expiresAt }, room, side, now, isJoin ? token : undefined));
+      return json(publicRoom({ code, version: row.version + 1, expires_at: expiresAt }, room, side, clock(), isJoin ? token : undefined));
     }
   }
   throw new ApiError(409, 'RETRY_SYNC', 'Бөлме жаңарып жатыр. Қайта көр.');
@@ -200,7 +230,7 @@ export async function handlePongRequest(request, binding, options = {}) {
     }
     if (!binding?.prepare) throw new ApiError(503, 'SERVER_NOT_READY', 'Ойын сервері әзір емес. Біраздан соң қайта көр.');
     const db = binding.withSession ? binding.withSession('first-primary') : binding;
-    const now = options.now?.() ?? Date.now();
+    const clock = () => options.now?.() ?? Date.now();
     const code = parts[3];
     const action = parts[4] || 'state';
     if (request.method !== 'GET' && request.method !== 'POST') throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'Бұл сұрау түрі қолдау таппайды.');
@@ -210,13 +240,13 @@ export async function handlePongRequest(request, binding, options = {}) {
         throw new ApiError(403, 'ORIGIN_REJECTED', 'Ойынды сайттың өзінен аш.');
       }
     }
-    if (!code && request.method === 'POST') return await createRoom(db, request, await bodyOf(request), now);
+    if (!code && request.method === 'POST') return await createRoom(db, request, await bodyOf(request), clock);
     if (!code || !ROOM_PATTERN.test(code)) throw new ApiError(400, 'INVALID_ROOM_CODE', 'Бөлме коды 6 әріп не саннан тұрсын.');
-    if (request.method === 'GET' && action === 'state') return await updateRoom(db, code, request, 'state', {}, now);
+    if (request.method === 'GET' && action === 'state') return await updateRoom(db, code, request, 'state', {}, clock);
     if (request.method !== 'POST' || !['join', 'sync', 'rematch', 'leave'].includes(action)) {
       throw new ApiError(404, 'UNKNOWN_ROUTE', 'Ойын әрекеті табылмады.');
     }
-    return await updateRoom(db, code, request, action, await bodyOf(request), now);
+    return await updateRoom(db, code, request, action, await bodyOf(request), clock);
   } catch (error) {
     if (error instanceof ApiError) return json({ error: error.message, code: error.code }, error.status);
     // Storage errors must not expose SQL, player tokens, or infrastructure details.

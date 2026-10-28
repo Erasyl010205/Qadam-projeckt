@@ -1,4 +1,5 @@
 import { PONG_RULES } from './pong-engine.js';
+import { createPongRenderClock, acceptPongSnapshot, advancePongRender } from './pong-render.js';
 
 const API = '/api/pong/rooms';
 const SESSION_PREFIX = 'qadam-pong:room:';
@@ -66,11 +67,14 @@ export function mountPong(host, options = {}) {
   const context = canvas.getContext('2d');
   const nameInput = find('[data-pong-name]'), codeInput = find('[data-pong-code]');
   const listeners = [], controllers = new Set(), pressedKeys = new Set();
-  let session = null, snapshot = null, previousSnapshot = null, receivedAt = 0;
+  let session = null, snapshot = null, receivedAt = 0;
+  let renderClock = createPongRenderClock();
+  const requestTiming = new WeakMap();
+  let courtCache = null, courtCacheKey = '', courtSize = { width:0, height:0 }, lastStatusPaint = 0;
   let destroyed = false, busy = false, syncInFlight = false, pendingNeutral = false;
   let pollTimer = null, animation = null, lastSyncSent = 0, failures = 0, networkIssue = '';
   let roomNotice = '', noticeUntil = 0;
-  let heldDirection = 0, dragTarget = null, desiredDirection = 0, directionChangedAt = 0;
+  let heldDirection = 0, dragTarget = null;
 
   const setText = (selector, value) => { const element = find(selector); if (element && element.textContent !== String(value)) element.textContent = String(value); };
   const on = (target, type, listener, config) => { target.addEventListener(type, listener, config); listeners.push(() => target.removeEventListener(type, listener, config)); };
@@ -109,6 +113,7 @@ export function mountPong(host, options = {}) {
     setText('[data-pong-room-code]', session.code);
     setText('[data-pong-side]', session.side === 'left' ? 'Сен — сол жақта' : 'Сен — оң жақта');
     for (const side of ['left','right']) find('[data-pong-you-' + side + ']').hidden = side !== session.side;
+    measureCourt();
     icons();
   }
 
@@ -135,10 +140,12 @@ export function mountPong(host, options = {}) {
       const headers = { Accept:'application/json' };
       if (body !== undefined) headers['Content-Type'] = 'application/json';
       if (authenticated && session) headers.Authorization = 'Bearer ' + session.token;
+      const sentAt = performance.now();
       const response = await fetch(API + path, { method:body === undefined ? 'GET' : 'POST', headers, body:body === undefined ? undefined : JSON.stringify(body), signal:controller.signal, cache:'no-store', credentials:'same-origin', keepalive });
       let result;
       try { result = await response.json(); } catch { throw Object.assign(new Error('Invalid server response'), { status:503 }); }
       if (!response.ok) throw Object.assign(new Error('Pong API error'), { status:response.status, code:result.code, serverMessage:typeof result.error === 'string' ? result.error : '' });
+      if (result && typeof result === 'object') requestTiming.set(result, { sentAt, receivedAt:performance.now() });
       return result;
     } finally {
       clearTimeout(timeout);
@@ -154,9 +161,10 @@ export function mountPong(host, options = {}) {
     session.side = result.side;
     if (Number.isSafeInteger(result.ackSeq)) session.seq = Math.max(session.seq, result.ackSeq);
     if (snapshot && result.round === snapshot.round && Number.isFinite(result.version) && result.version < snapshot.version) return;
-    previousSnapshot = snapshot;
     snapshot = result;
-    receivedAt = performance.now();
+    const timing = requestTiming.get(result) || { receivedAt:performance.now() };
+    receivedAt = timing.receivedAt;
+    renderClock = acceptPongSnapshot(renderClock, result, { ...timing, side:session.side, direction:currentDirection() });
     failures = 0;
     networkIssue = '';
     saveSession();
@@ -190,12 +198,13 @@ export function mountPong(host, options = {}) {
   function updateStatus(now = performance.now()) {
     if (!session) return;
     const state = snapshot?.state;
+    const serveRemaining = renderClock.visual?.serveRemaining ?? state?.serveRemaining ?? 0;
     const stale = Boolean(snapshot && now - receivedAt > 2500);
     const issue = networkIssue || (stale ? 'Сервермен байланыс кешігіп жатыр. Қайта қосылуда…' : '');
     const error = find('[data-pong-network-error]');
     error.hidden = !issue;
     if (error.textContent !== issue) error.textContent = issue;
-    const status = !snapshot ? 'Бөлмеге қосылуда…' : issue ? 'Байланыс қалпына келуде' : snapshot.paused ? 'Қарсыластың байланысын күтеміз' : state.phase === 'waiting' ? 'Қарсылас күтілуде' : state.phase === 'finished' ? 'Ойын аяқталды' : state.serveRemaining > 0 ? 'Доп ойынға қосылуда' : 'Ойын жүріп жатыр';
+    const status = !snapshot ? 'Бөлмеге қосылуда…' : issue ? 'Байланыс қалпына келуде' : snapshot.paused ? 'Қарсыластың байланысын күтеміз' : state.phase === 'waiting' ? 'Қарсылас күтілуде' : state.phase === 'finished' ? 'Ойын аяқталды' : serveRemaining > 0 ? 'Доп ойынға қосылуда' : 'Ойын жүріп жатыр';
     setText('[data-pong-status]', !issue && now < noticeUntil ? roomNotice : status);
     find('[data-pong-status-dot]').dataset.tone = !snapshot || issue || snapshot.paused || state.phase === 'waiting' ? 'waiting' : 'live';
     let title = '', description = '', symbol = '';
@@ -204,10 +213,10 @@ export function mountPong(host, options = {}) {
     else if (state.phase === 'waiting') { title = 'Досыңды шақыр'; description = session.code + ' кодын жібер. Ол қосылғанда ойын басталады.'; symbol = '＋'; }
     else if (state.phase === 'finished') { title = state.winner === session.side ? 'Жеңіс сенікі!' : (snapshot.players[state.winner]?.name || 'Қарсылас') + ' жеңді'; description = 'Нәтиже: ' + state.score.left + ' : ' + state.score.right; symbol = state.winner === session.side ? '★' : '↗'; }
     else if (snapshot.paused) { title = 'Ойын уақытша тоқтады'; description = 'Қарсылас қайта қосылғанда жалғасады.'; symbol = 'Ⅱ'; }
-    else if (state.serveRemaining > 0) { title = String(Math.max(1, Math.ceil(state.serveRemaining - Math.min(0.1, (now - receivedAt) / 1000)))); description = 'Дайын бол'; symbol = ''; }
+    else if (serveRemaining > 0) { title = String(Math.max(1, Math.ceil(serveRemaining))); description = 'Дайын бол'; symbol = ''; }
     const overlay = find('[data-pong-overlay]');
     overlay.hidden = !title;
-    overlay.classList.toggle('is-countdown', Boolean(state?.phase === 'playing' && !snapshot?.paused && !issue && state.serveRemaining > 0));
+    overlay.classList.toggle('is-countdown', Boolean(state?.phase === 'playing' && !snapshot?.paused && !issue && serveRemaining > 0));
     setText('[data-pong-overlay-title]', title);
     setText('[data-pong-overlay-text]', description);
     setText('[data-pong-overlay-symbol]', symbol);
@@ -218,14 +227,13 @@ export function mountPong(host, options = {}) {
     if (!visible() || snapshot?.state.phase !== 'playing' || snapshot.paused) return 0;
     let direction = heldDirection;
     if (dragTarget !== null) {
-      const y = snapshot.state.paddles[session.side].y;
+      const y = renderClock.visual?.paddles[session.side].y ?? snapshot.state.paddles[session.side].y;
       direction = Math.abs(dragTarget - y) <= 12 ? 0 : dragTarget < y ? -1 : 1;
     } else if (pressedKeys.size) {
       const up = pressedKeys.has('KeyW') || pressedKeys.has('ArrowUp');
       const down = pressedKeys.has('KeyS') || pressedKeys.has('ArrowDown');
       direction = up === down ? 0 : up ? -1 : 1;
     }
-    if (direction !== desiredDirection) { desiredDirection = direction; directionChangedAt = performance.now(); }
     return direction;
   }
 
@@ -272,7 +280,6 @@ export function mountPong(host, options = {}) {
     pressedKeys.clear();
     heldDirection = 0;
     dragTarget = null;
-    desiredDirection = 0;
     root.classList.remove('pong-control-active');
     for (const button of root.querySelectorAll('[data-pong-direction]')) button.classList.remove('is-pressed');
   }
@@ -282,7 +289,7 @@ export function mountPong(host, options = {}) {
     clearTimeout(pollTimer);
     clearSession();
     snapshot = null;
-    previousSnapshot = null;
+    renderClock = createPongRenderClock();
     networkIssue = '';
     lobby.hidden = false;
     room.hidden = true;
@@ -304,7 +311,7 @@ export function mountPong(host, options = {}) {
       if (!roomCode(result.code) || !['left','right'].includes(result.side) || typeof result.token !== 'string') throw Object.assign(new Error('Missing room session'), { status:503 });
       session = { code:result.code, side:result.side, token:result.token, name, seq:Number.isSafeInteger(result.ackSeq) ? result.ackSeq : 0 };
       snapshot = null;
-      previousSnapshot = null;
+      renderClock = createPongRenderClock();
       accept(result);
       showRoom();
       updateRoute(session.code);
@@ -429,43 +436,59 @@ export function mountPong(host, options = {}) {
     on(button, 'blur', release);
   }
 
+  function measureCourt() {
+    const bounds = canvas.getBoundingClientRect();
+    courtSize = { width:bounds.width, height:bounds.height };
+  }
+  on(window, 'resize', measureCourt);
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(measureCourt);
+    observer.observe(canvas);
+    listeners.push(() => observer.disconnect());
+  }
+
+  function paintCourt(width, height, settings) {
+    const key = [width,height,settings.width,settings.height].join(':');
+    if (courtCacheKey === key) return;
+    courtCache ||= document.createElement('canvas');
+    courtCache.width = width; courtCache.height = height;
+    const backgroundContext = courtCache.getContext('2d');
+    backgroundContext.setTransform(width / settings.width, 0, 0, height / settings.height, 0, 0);
+    const background = backgroundContext.createRadialGradient(settings.width / 2, settings.height / 2, 10, settings.width / 2, settings.height / 2, settings.width * 0.65);
+    background.addColorStop(0, '#14213a'); background.addColorStop(1, '#090f1c');
+    backgroundContext.fillStyle = background; backgroundContext.fillRect(0, 0, settings.width, settings.height);
+    backgroundContext.strokeStyle = '#263751'; backgroundContext.lineWidth = 1.5; backgroundContext.strokeRect(18, 18, settings.width - 36, settings.height - 36);
+    backgroundContext.setLineDash([7,12]); backgroundContext.beginPath(); backgroundContext.moveTo(settings.width / 2, 26); backgroundContext.lineTo(settings.width / 2, settings.height - 26); backgroundContext.stroke(); backgroundContext.setLineDash([]);
+    backgroundContext.beginPath(); backgroundContext.arc(settings.width / 2, settings.height / 2, 60, 0, Math.PI * 2); backgroundContext.strokeStyle = '#26375170'; backgroundContext.stroke();
+    courtCacheKey = key;
+  }
+
   function draw(now) {
     if (destroyed) return;
     if (!room.hidden && visible() && context) {
-      const settings = rules(), bounds = canvas.getBoundingClientRect(), ratio = Math.min(2, window.devicePixelRatio || 1);
-      const width = Math.max(1, Math.round(bounds.width * ratio)), height = Math.max(1, Math.round(bounds.height * ratio));
+      if (!courtSize.width || !courtSize.height) measureCourt();
+      const settings = rules(), ratio = Math.min(2, window.devicePixelRatio || 1);
+      const width = Math.max(1, Math.round(courtSize.width * ratio)), height = Math.max(1, Math.round(courtSize.height * ratio));
       if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+      paintCourt(width, height, settings);
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.drawImage(courtCache, 0, 0);
       context.setTransform(width / settings.width, 0, 0, height / settings.height, 0, 0);
-      context.fillStyle = '#090f1c'; context.fillRect(0, 0, settings.width, settings.height);
-      const background = context.createRadialGradient(settings.width / 2, settings.height / 2, 10, settings.width / 2, settings.height / 2, settings.width * 0.65);
-      background.addColorStop(0, '#14213a'); background.addColorStop(1, '#090f1c');
-      context.fillStyle = background; context.fillRect(0, 0, settings.width, settings.height);
-      context.strokeStyle = '#263751'; context.lineWidth = 1.5; context.strokeRect(18, 18, settings.width - 36, settings.height - 36);
-      context.setLineDash([7,12]); context.beginPath(); context.moveTo(settings.width / 2, 26); context.lineTo(settings.width / 2, settings.height - 26); context.stroke(); context.setLineDash([]);
-      context.beginPath(); context.arc(settings.width / 2, settings.height / 2, 60, 0, Math.PI * 2); context.strokeStyle = '#26375170'; context.stroke();
       if (snapshot) {
-        const { state } = snapshot;
-        const elapsed = state.phase === 'playing' && !snapshot.paused && !networkIssue ? Math.min(0.1, Math.max(0, (now - receivedAt) / 1000)) : 0;
+        renderClock = advancePongRender(renderClock, { now, direction:currentDirection(), active:true });
+        const state = renderClock.visual;
         for (const side of ['left','right']) {
           const paddle = state.paddles[side];
-          let y = paddle.y;
-          if (side === session.side && elapsed > 0) y += currentDirection() * settings.paddleSpeed * Math.min(elapsed, Math.max(0, (now - directionChangedAt) / 1000));
-          else if (previousSnapshot?.round === snapshot.round && previousSnapshot.state.phase === state.phase && elapsed > 0) y = previousSnapshot.state.paddles[side].y + (paddle.y - previousSnapshot.state.paddles[side].y) * Math.min(1, elapsed / 0.075);
-          y = clamp(y, settings.paddleHeight / 2, settings.height - settings.paddleHeight / 2);
           context.shadowColor = side === 'left' ? '#4a88ff' : '#49d9a6'; context.shadowBlur = 16;
           context.fillStyle = side === 'left' ? '#78a9ff' : '#6ae4bb';
-          context.fillRect(paddle.x - settings.paddleWidth / 2, y - settings.paddleHeight / 2, settings.paddleWidth, settings.paddleHeight);
+          context.fillRect(paddle.x - settings.paddleWidth / 2, paddle.y - settings.paddleHeight / 2, settings.paddleWidth, settings.paddleHeight);
           context.shadowBlur = 0;
         }
         const ball = state.ball;
-        // Presentation only: bounded extrapolation never bounces, scores or decides a winner.
-        const travel = state.serveRemaining > 0 ? 0 : elapsed;
-        const x = clamp(ball.x + ball.vx * travel, settings.ballRadius, settings.width - settings.ballRadius);
-        const y = clamp(ball.y + ball.vy * travel, settings.ballRadius, settings.height - settings.ballRadius);
         context.shadowColor = '#c5d9ff'; context.shadowBlur = 20; context.fillStyle = '#edf5ff';
-        context.beginPath(); context.arc(x, y, settings.ballRadius, 0, Math.PI * 2); context.fill(); context.shadowBlur = 0;
+        context.beginPath(); context.arc(ball.x, ball.y, settings.ballRadius, 0, Math.PI * 2); context.fill(); context.shadowBlur = 0;
       }
-      updateStatus(now);
+      if (now - lastStatusPaint >= 100) { updateStatus(now); lastStatusPaint = now; }
     }
     animation = requestAnimationFrame(draw);
   }

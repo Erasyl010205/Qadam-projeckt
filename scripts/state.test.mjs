@@ -79,11 +79,11 @@ test('unavailable browser storage and invalid awards do not crash or reduce XP',
   delete globalThis.localStorage;
 });
 
-test('both courses have eight unique, valid knowledge checks and code tasks', () => {
+test('expanded courses have unique, valid knowledge checks and code tasks', () => {
   assert.deepEqual(courses.map(course => course.id), ['python', 'java']);
   const ids = new Set();
   for (const course of courses) {
-    assert.equal(course.lessons.length, 8);
+    assert.equal(course.lessons.length, course.id === 'python' ? 8 : 13);
     for (const lesson of course.lessons) {
       assert.ok(!ids.has(lesson.id));
       ids.add(lesson.id);
@@ -94,5 +94,40 @@ test('both courses have eight unique, valid knowledge checks and code tasks', ()
       assert.ok(lesson.xp > 0);
     }
   }
+  assert.equal(ids.size, 21);
   assert.ok(demoLeaders.every(leader => leader.id.startsWith('demo-')));
+});
+
+test('expanding Java preserves original completion, XP and drafts while new lessons award XP once', () => {
+  const java = courses.find(course => course.id === 'java');
+  const originalIds = ['java-variables', 'java-input', 'java-conditions', 'java-loops', 'java-arrays', 'java-methods', 'java-oop', 'java-algorithms'];
+  const originalXp = originalIds.reduce((total, id) => total + java.lessons.find(lesson => lesson.id === id).xp, 0);
+  const drafts = { 'java-oop': 'class Student {}', 'java-oop::practice-0': '// Менің бұрынғы шешімім' };
+  globalThis.localStorage = fakeStorage();
+  try {
+    localStorage.setItem('qadam-code:v1', JSON.stringify({ completed: originalIds, xp: originalXp, drafts }));
+    const restored = loadState();
+    assert.deepEqual(restored.completed, originalIds);
+    assert.equal(restored.xp, originalXp);
+    assert.deepEqual(restored.drafts, drafts);
+    assert.equal(java.lessons.length, 13);
+    assert.equal(java.lessons.filter(lesson => restored.completed.includes(lesson.id)).length, 8, 'the learner retains eight completed lessons in the expanded course');
+
+    const newLesson = java.lessons.find(lesson => lesson.id === 'java-encapsulation');
+    assert.ok(newLesson, 'the next OOP topic must be available');
+    const completed = completeLesson(restored, newLesson.id, newLesson.xp);
+    assert.equal(restored.completed.length, 8, 'completion must not mutate the restored state');
+    assert.equal(completed.completed.length, 9);
+    assert.equal(completed.xp, originalXp + newLesson.xp);
+    assert.deepEqual(completed.drafts, drafts);
+    saveState(completed);
+
+    const duplicate = completeLesson(loadState(), newLesson.id, newLesson.xp);
+    assert.equal(duplicate.xp, originalXp + newLesson.xp);
+    assert.equal(duplicate.completed.length, 9);
+    assert.equal(duplicate.activities.length, 1);
+    assert.deepEqual(duplicate.drafts, drafts);
+  } finally {
+    delete globalThis.localStorage;
+  }
 });

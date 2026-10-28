@@ -1,5 +1,6 @@
 import { pythonContent } from './content/python.js';
 import { javaContent } from './content/java.js';
+import { javaOopContent } from './content/java-oop.js';
 
 // Public lesson content. These are knowledge checks, not hidden code test cases.
 export const courses = [
@@ -83,9 +84,9 @@ export const courses = [
     ]
   },
   {
-    id: 'java', title: 'Java негіздері', language: 'Java',
+    id: 'java', title: 'Java негіздері және ООП', language: 'Java',
     description: 'Типтерді түсін, әдістер құр, объектілермен таныс және алғашқы алгоритмді іске асыр.',
-    tag: 'Бастаушыға', duration: '1 сағ 30 мин', color: 'blue',
+    tag: 'Бастаушы · ООП', duration: '1 сағ 30 мин', color: 'blue',
     lessons: [
       {
         id: 'java-variables', title: 'Айнымалылар және дерек типтері', module: '01 · Java-ға кіріспе', minutes: 9, xp: 50,
@@ -150,6 +151,7 @@ export const courses = [
         explanation: 'new кілт сөзі конструкторды шақырып, жаңа объект жасайды.',
         task: 'Student класына name пен xp өрістерін орнататын конструктор жаз. main ішінде бір Student жаса.'
       },
+      ...Object.values(javaOopContent),
       {
         id: 'java-algorithms', title: 'Сызықтық іздеу алгоритмі', module: '04 · Алгоритмге қадам', minutes: 15, xp: 100,
         body: ['Сызықтық іздеу массивті басынан соңына дейін қарайды. Қажетті мән табылса, оның индексін қайтарады.', 'Мән табылмаса, -1 қайтаруға болады. Ең нашар жағдайда барлық n элемент тексеріледі, сондықтан уақыт күрделілігі O(n).'],
@@ -164,7 +166,7 @@ export const courses = [
 ];
 
 // Stable IDs retain existing local progress and drafts when content is expanded.
-const detailedContent = { ...pythonContent, ...javaContent };
+const detailedContent = { ...pythonContent, ...javaContent, ...javaOopContent };
 for (const course of courses) {
   for (const lesson of course.lessons) {
     Object.assign(lesson,detailedContent[lesson.id] || {});
@@ -176,7 +178,7 @@ for (const course of courses) {
   course.duration = Math.floor(minutes/60)+' сағ '+minutes%60+' мин';
   course.description = course.id === 'python'
     ? 'Python-ды түсініп үйрен: толық теория, қадамдап талданған мысалдар және шешімі бар жаттығулар.'
-    : 'Java негіздерін меңгер: дерек типтерінен объектілер мен алгоритмдерге дейінгі толық түсіндірме.';
+    : 'Java негіздері мен ООП: инкапсуляция, мұрагерлік, абстракт класс, интерфейс және полиморфизм.';
 }
 
 // Explicitly illustrative people. Never merge with a real server leaderboard.

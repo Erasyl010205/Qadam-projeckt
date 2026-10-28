@@ -2,9 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { courses } from '../dist/data.js';
 
-const expectedIds = {
+const originalIds = {
   python: ['py-variables', 'py-input', 'py-conditions', 'py-loops', 'py-lists', 'py-functions', 'py-dictionaries', 'py-algorithms'],
   java: ['java-variables', 'java-input', 'java-conditions', 'java-loops', 'java-arrays', 'java-methods', 'java-oop', 'java-algorithms'],
+};
+const newJavaIds = ['java-encapsulation', 'java-inheritance', 'java-abstract', 'java-interfaces', 'java-polymorphism'];
+const expectedIds = {
+  python: originalIds.python,
+  java: [...originalIds.java.slice(0, -1), ...newJavaIds, 'java-algorithms'],
 };
 
 function text(value, label) {
@@ -29,8 +34,18 @@ function question(value, label) {
 test('all original course and lesson links remain available', () => {
   assert.deepEqual(courses.map(course => course.id), ['python', 'java']);
   for (const course of courses) {
+    const original = new Set(originalIds[course.id]);
+    assert.deepEqual(course.lessons.map(lesson => lesson.id).filter(id => original.has(id)), originalIds[course.id], 'existing lesson IDs must retain their order for saved links and progress');
+  }
+});
+
+test('the expanded curriculum has eight Python and thirteen Java lessons in learning order', () => {
+  for (const course of courses) {
     assert.deepEqual(course.lessons.map(lesson => lesson.id), expectedIds[course.id]);
   }
+  const allIds = courses.flatMap(course => course.lessons.map(lesson => lesson.id));
+  assert.equal(allIds.length, 21);
+  assert.equal(new Set(allIds).size, 21, 'every lesson must have its own route, progress record and workspace');
 });
 
 for (const course of courses) {

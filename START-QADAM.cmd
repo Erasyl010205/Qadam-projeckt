@@ -9,9 +9,15 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-if not exist "%~dp0dist\index.html" (
+if not exist "%~dp0public\index.html" (
   echo Сайт файлдары табылмады. ZIP архивін толық шығарып алыңыз.
-  echo START-QADAM.cmd, dist және scripts бір буманың ішінде болуы керек.
+  echo START-QADAM.cmd, public, server, drizzle және scripts бір буманың ішінде болуы керек.
+  pause
+  exit /b 1
+)
+node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 24 ? 0 : 1)"
+if errorlevel 1 (
+  echo Node.js 24 немесе жаңарақ нұсқасы керек. Node.js жаңартып, осы файлды қайта ашыңыз.
   pause
   exit /b 1
 )

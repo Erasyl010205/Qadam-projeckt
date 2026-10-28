@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gradeLesson, lessonChecks, workspaceTask } from '../dist/learning.js';
+import { gradeLesson, lessonChecks, workspaceTask } from '../public/learning.js';
 
 const lesson = {
   id: 'py-sample', title: 'Үлгі сабақ', task: 'Негізгі тапсырма', starter: '# негізгі код\n',

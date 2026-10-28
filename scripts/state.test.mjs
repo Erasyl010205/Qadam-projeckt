@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { courses, demoLeaders } from '../dist/data.js';
-import { defaultState, loadState, saveState, completeLesson, resetState } from '../dist/state.js';
+import { courses, demoLeaders } from '../public/data.js';
+import { defaultState, loadState, saveState, completeLesson, resetState } from '../public/state.js';
 
 function fakeStorage() {
   const values = new Map();

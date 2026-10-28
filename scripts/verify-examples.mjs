@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { courses } from '../dist/data.js';
+import { courses } from '../public/data.js';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const scratchParent = resolve(projectRoot, '../../work/example-verification');

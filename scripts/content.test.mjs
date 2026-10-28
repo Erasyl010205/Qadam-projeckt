@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { courses } from '../dist/data.js';
+import { courses } from '../public/data.js';
 
 const originalIds = {
   python: ['py-variables', 'py-input', 'py-conditions', 'py-loops', 'py-lists', 'py-functions', 'py-dictionaries', 'py-algorithms'],

@@ -1,0 +1,1000 @@
+/* Reading and play surfaces for the Qadam workspace. */
+.expanded-lesson .lesson-content {
+  color: var(--text);
+  padding: 36px;
+}
+
+.expanded-lesson .lesson-content p,
+.expanded-lesson .lesson-content .lesson-section > p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+  max-width: 72ch;
+}
+
+.expanded-lesson .lesson-content .lesson-lead {
+  color: #425b51;
+  font-size: 17px;
+  line-height: 1.85;
+}
+
+.expanded-lesson .lesson-meta {
+  color: var(--muted);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.lesson-intro h1 {
+  font-size: 31px;
+  font-weight: 700;
+  letter-spacing: -.6px;
+}
+
+.learning-objectives {
+  background: #eef3ed;
+  border-color: #d6e1d5;
+  border-radius: 8px;
+  padding: 22px 24px;
+}
+
+.objectives-title {
+  color: #315f49;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.learning-objectives li {
+  color: #496450;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.learning-objectives li svg {
+  color: var(--green);
+}
+
+.prerequisite {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.lesson-reading-path {
+  background: #fafaf7;
+  border-color: var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  padding: 20px;
+}
+
+.lesson-reading-path strong {
+  color: var(--text);
+}
+
+.lesson-reading-path span {
+  color: var(--muted);
+}
+
+.lesson-stages {
+  border-color: var(--line);
+  gap: 8px;
+}
+
+.lesson-stages a {
+  color: #466256;
+  background: #fff;
+  border-color: #d9e0d8;
+  font-size: 12px;
+  padding: 9px 12px;
+}
+
+.lesson-stages a:hover,
+.lesson-stages a:focus-visible {
+  color: #234d40;
+  background: #edf2eb;
+  border-color: #a9bdae;
+}
+
+.section-index {
+  color: #637d6a;
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.expanded-lesson .lesson-section h2 {
+  color: var(--text);
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.expanded-lesson .lesson-section h3 {
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.lesson-table-wrap {
+  border-color: var(--line);
+  border-radius: 8px;
+}
+
+.lesson-table th {
+  color: #40594b;
+  background: #f0f3ed;
+  font-size: 13px;
+  padding: 14px 16px;
+}
+
+.lesson-table td {
+  color: #5b6e60;
+  border-color: var(--line);
+  background: #fff;
+  font-size: 14px;
+  padding: 14px 16px;
+}
+
+.lesson-table td:first-child {
+  color: #294d3b;
+}
+
+.teaching-code {
+  color: #dce6df;
+  background: #192722;
+  border-color: #34493f;
+  border-radius: 8px;
+}
+
+.teaching-code-toolbar {
+  color: #b9c9be;
+  background: #22342c;
+  border-color: #3b4c42;
+  font-size: 12px;
+  padding: 12px 15px;
+}
+
+.teaching-code-toolbar .code-lang {
+  color: #98ada0;
+  font-size: 11px;
+}
+
+.copy-code {
+  color: #cfddd3;
+  background: #2b4035;
+  border-color: #546b5b;
+  font-size: 11px;
+  padding: 5px 8px;
+}
+
+.copy-code:hover,
+.copy-code:focus-visible {
+  color: #fff;
+  background: #3b5545;
+  border-color: #849a87;
+}
+
+.teaching-code pre {
+  color: #dce7de;
+  font-size: 13px;
+  line-height: 1.85;
+  padding: 23px;
+}
+
+.expected-output {
+  color: #3b6050;
+  background: #eef4ed;
+  border-color: #d3e1d1;
+  padding: 17px 20px;
+}
+
+.expected-output .output-label {
+  color: #466b50;
+  font-size: 12px;
+  letter-spacing: .02em;
+}
+
+.expected-output pre {
+  color: #2f5840;
+  font-size: 13px;
+}
+
+.expected-output .output-note {
+  color: #6c7e6b;
+  font-size: 12px;
+}
+
+.expected-output .output-label:not(:first-child) {
+  border-color: #d1dfce;
+}
+
+.worked-example,
+.practice-card {
+  background: #fafbf8;
+  border-color: #dce2d8;
+  border-radius: 9px;
+  padding: 26px;
+}
+
+.example-heading > span {
+  color: #526f56;
+  background: #e9eee5;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .05em;
+}
+
+.expanded-lesson .example-heading h3 {
+  color: var(--text);
+  font-size: 21px;
+}
+
+.expanded-lesson .worked-example > p,
+.expanded-lesson .practice-card > p {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.walkthrough h4 {
+  color: #3b5544;
+  font-size: 14px;
+}
+
+.walkthrough li {
+  color: #586c5b;
+  font-size: 14px;
+  line-height: 1.85;
+  grid-template-columns: 25px 1fr;
+  gap: 12px;
+}
+
+.walkthrough li::before {
+  color: #456c4a;
+  background: #edf2e8;
+  border-color: #d0ddc8;
+  font-size: 12px;
+  height: 25px;
+  width: 25px;
+  line-height: 24px;
+}
+
+.mistake-card {
+  background: #faf5ed;
+  border-color: #e8ddc9;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.expanded-lesson .mistake-card h3 {
+  color: #896133;
+  font-size: 16px;
+}
+
+.expanded-lesson .mistake-card p {
+  color: #796d5b;
+  font-size: 14px;
+}
+
+.mistake-code {
+  background: #2b2524;
+  border-color: #5a4640;
+  padding: 16px;
+}
+
+.mistake-code > span {
+  color: #e4b4a3;
+  font-size: 12px;
+}
+
+.mistake-code pre {
+  color: #e6d0c7;
+  font-size: 13px;
+}
+
+.mistake-code.corrected {
+  background: #1d3027;
+  border-color: #476652;
+}
+
+.mistake-code.corrected > span {
+  color: #aacdb3;
+}
+
+.mistake-code.corrected pre {
+  color: #cee5d3;
+}
+
+.practice-number {
+  color: #3b694d;
+  background: #e5eee0;
+  border-color: #c9d8bf;
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.practice-heading .small-label {
+  color: #61715c;
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.expanded-lesson .practice-heading h3 {
+  font-size: 18px;
+}
+
+.practice-card > .expected-output {
+  border-top-color: #d3e1d1;
+}
+
+.practice-card > .btn {
+  font-size: 12px;
+}
+
+.lesson-disclosure {
+  border-color: #dce3d7;
+}
+
+.lesson-disclosure > summary {
+  color: #3b6751;
+  font-size: 14px;
+  padding: 16px 2px;
+}
+
+.lesson-disclosure > summary::after,
+.lesson-disclosure > summary > svg {
+  color: #6b886f;
+}
+
+.lesson-disclosure > summary:hover {
+  color: #1d4d37;
+}
+
+.expanded-lesson .disclosure-content p {
+  color: #5b6f5c;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.expanded-lesson .disclosure-content .solution-note {
+  color: #61715c;
+  font-size: 13px;
+}
+
+.lesson-summary-box {
+  color: #426348;
+  background: #edf3e8;
+  border-color: #d2dfc9;
+  border-radius: 9px;
+}
+
+.expanded-lesson .lesson-summary-box h2 {
+  color: #365b3c;
+  font-size: 22px;
+}
+
+.lesson-summary-box ul {
+  color: #547050;
+}
+
+.lesson-summary-box li {
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.quiz-question {
+  background: #fafbf8;
+  border-color: #dbe2d6;
+  border-radius: 9px;
+  padding: 24px;
+}
+
+.quiz-question legend {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.quiz-question legend > span {
+  color: #61715c;
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+
+.quiz-question .quiz-option {
+  color: #53694f;
+  background: #fff;
+  border-color: #d9e0d3;
+  font-size: 14px;
+  padding: 13px;
+}
+
+.quiz-question .quiz-option:hover {
+  border-color: #a7baa0;
+  background: #f3f6ef;
+}
+
+.quiz-question .quiz-option:has(input:checked) {
+  color: #2e5c36;
+  border-color: #7c9e72;
+  background: #eaf2e3;
+}
+
+.quiz-question .quiz-option input {
+  accent-color: var(--green);
+  height: 15px;
+  width: 15px;
+}
+
+.quiz-question.answer-correct {
+  background: #f0f7ec;
+  border-color: #8eb77c;
+}
+
+.quiz-question.answer-correct .question-feedback {
+  color: #3f7335;
+}
+
+.quiz-question.answer-incorrect {
+  background: #fcf7ed;
+  border-color: #c6a063;
+}
+
+.quiz-question.answer-incorrect .question-feedback {
+  color: #89632d;
+}
+
+.question-feedback {
+  font-size: 14px;
+}
+
+.expanded-lesson .lesson-content .quiz-note {
+  color: #61715c;
+  font-size: 12px;
+}
+
+.lesson-resources,
+.lesson-pagination {
+  border-color: var(--line);
+}
+
+.expanded-lesson .lesson-resources h3 {
+  font-size: 18px;
+}
+
+.expanded-lesson .lesson-resources p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.lesson-resources > a {
+  color: var(--blue);
+  font-size: 14px;
+  line-height: 1.7;
+  text-decoration: underline;
+  text-decoration-color: #b0c4af;
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+}
+
+.lesson-resources > a:hover {
+  color: #1c4c38;
+  text-decoration-color: currentColor;
+}
+
+.toc-label,
+.toc-footer {
+  color: #61715c;
+  font-size: 12px;
+}
+
+.in-page-toc a {
+  color: #65765e;
+  font-size: 13px;
+  padding: 9px 0;
+}
+
+.in-page-toc a:hover,
+.in-page-toc a.active {
+  color: #2f6241;
+}
+
+.in-page-toc .toc-number {
+  color: #61715c;
+}
+
+.toc-footer {
+  border-color: var(--line);
+}
+
+.course-outline > summary {
+  color: #466445;
+  font-size: 14px;
+}
+
+.course-outline nav a {
+  color: #61715c;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.course-outline nav a.active {
+  color: #2a6137;
+}
+
+.course-outline nav a > span {
+  color: #6b7d5c;
+}
+
+.task-output {
+  background: #eef3e9;
+  border-color: #d4e0ca;
+  padding: 16px;
+}
+
+.task-output strong {
+  color: #627d56;
+  font-size: 12px;
+}
+
+.task-output pre {
+  color: #395d36;
+  font-size: 13px;
+}
+
+.exercise-picker {
+  background: #eef2e8;
+  border-color: #d5dfcb;
+  padding: 17px 20px;
+}
+
+.exercise-picker label {
+  color: #61784e;
+  font-size: 12px;
+}
+
+.exercise-picker select {
+  color: #30442c;
+  background: #fff;
+  border-color: #cdd8bf;
+  font-size: 13px;
+}
+
+/* The court and its overlays keep their dark game surface. */
+.pong-root {
+  --pong-left: #3b72a6;
+  --pong-right: #3b8063;
+}
+
+.pong-intro p,
+.pong-entry > p {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.pong-eyebrow {
+  color: #55705d;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+}
+
+.pong-intro h2 {
+  color: var(--text);
+  font-size: 31px;
+  font-weight: 700;
+  letter-spacing: -.6px;
+}
+
+.pong-format {
+  color: #5d7658;
+  background: #edf2e8;
+  border-color: #d4dfc9;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.pong-entry-icon {
+  color: #426c48;
+  background: #edf2e8;
+  border-color: #d3dfc8;
+  border-radius: 9px;
+}
+
+.pong-entry h3 {
+  color: var(--text);
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.pong-entry .form-label {
+  color: #5f7056;
+  font-size: 13px;
+}
+
+.pong-entry .form-control {
+  color: #354c32;
+  background: #fcfcf9;
+  border-color: #d1dbc6;
+  font-size: 14px;
+}
+
+.pong-entry .form-control:focus {
+  color: var(--text);
+  background: #fff;
+  border-color: #6f9367;
+  box-shadow: 0 0 0 3px #577d5317;
+}
+
+.pong-entry .form-control::placeholder {
+  color: #6f7c64;
+}
+
+.pong-divider {
+  color: #6a795f;
+  font-size: 12px;
+}
+
+.pong-divider::before,
+.pong-divider::after {
+  background: #dfe5d8;
+}
+
+.pong-code-input::placeholder {
+  color: #6f7c64;
+}
+
+.pong-join small {
+  color: #61715c;
+  font-size: 12px;
+}
+
+.pong-message {
+  color: #9a4f40;
+  background: #fcf0ec;
+  border-color: #e7c3b8;
+  font-size: 13px;
+}
+
+.pong-message[data-tone=info] {
+  color: #38634a;
+  background: #eef4e9;
+  border-color: #cbdcc3;
+}
+
+.pong-guide {
+  color: var(--text);
+  background: #f0f3eb;
+  border-color: #dae1d1;
+}
+
+.pong-guide > h3 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.pong-guide li > span {
+  color: #537847;
+  background: #e5eddd;
+  border-color: #c7d7bc;
+  font-size: 12px;
+}
+
+.pong-guide li strong {
+  color: #3e5837;
+  font-size: 15px;
+}
+
+.pong-guide li p {
+  color: #61715c;
+  font-size: 14px;
+}
+
+.pong-root kbd {
+  color: #4b6640;
+  background: #fff;
+  border-color: #c5d3b8;
+  font-size: 12px;
+}
+
+.pong-network-note {
+  color: #61715c !important;
+  border-color: #d2deca;
+  font-size: 12px !important;
+}
+
+.pong-network-note svg {
+  color: #6d8d5f;
+}
+
+.pong-mini-court {
+  background: #24372c;
+  border-color: #5f7966;
+  opacity: .7;
+  transform: none;
+  border-radius: 5px;
+}
+
+.pong-mini-court::before {
+  border-color: #78927c;
+}
+
+.pong-mini-court span {
+  background: #8eb8e0;
+}
+
+.pong-mini-court i {
+  background: #9dd5b6;
+}
+
+.pong-mini-court b {
+  background: #e7eddf;
+  box-shadow: none;
+}
+
+.pong-room-bar {
+  background: #f5f7f0;
+  border-color: var(--line);
+}
+
+.pong-room-identity .pong-eyebrow {
+  color: #61715c;
+  font-size: 11px;
+  max-width: 64px;
+}
+
+.pong-room-identity > strong {
+  color: #355334;
+  font-size: 21px;
+}
+
+.pong-room-actions .btn {
+  font-size: 12px;
+}
+
+.pong-scoreboard {
+  color: var(--text);
+  background: #fff;
+}
+
+.pong-player strong,
+.pong-player-right strong {
+  color: #415938;
+  font-size: 14px;
+}
+
+.pong-player > div > span {
+  color: #637659;
+  font-size: 12px;
+}
+
+.pong-player-indicator {
+  background: #d4deca;
+}
+
+.pong-player-left.is-connected .pong-player-indicator,
+.pong-player-right.is-connected .pong-player-indicator {
+  box-shadow: none;
+}
+
+.pong-you {
+  color: #426d95;
+  background: #edf3f8;
+  border-color: #bfd0df;
+  font-size: 10px;
+}
+
+.pong-player-right .pong-you {
+  color: #3c7354;
+  background: #ebf3e8;
+  border-color: #c3d7b9;
+}
+
+.pong-score strong {
+  color: #304c2d;
+}
+
+.pong-score > span {
+  color: #75876a;
+}
+
+.pong-score small {
+  color: #61715c;
+  font-size: 10px;
+}
+
+.pong-court-wrap {
+  background: #192722;
+  border-color: #405741;
+  border-radius: 7px;
+}
+
+.pong-court-overlay {
+  background: #1b2b24f2;
+  border-color: #536c56;
+  border-radius: 9px;
+  box-shadow: 0 12px 35px #101e1a55;
+}
+
+.pong-overlay-symbol {
+  color: #c4d7bd;
+  background: #2c4533;
+  border-color: #5f7d59;
+  border-radius: 7px;
+}
+
+.pong-court-overlay h3 {
+  color: #eff4e9;
+  font-weight: 600;
+}
+
+.pong-court-overlay p {
+  color: #b1c3a9;
+  font-size: 13px;
+}
+
+.pong-court-overlay.is-countdown {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.pong-court-overlay.is-countdown h3 {
+  text-shadow: 0 2px 20px #142d1b99;
+}
+
+.pong-court-overlay.is-countdown p {
+  color: #d2e4c6;
+}
+
+.pong-court-focus {
+  color: #b1c6a8;
+  font-size: 11px;
+}
+
+.pong-room-status {
+  color: #647b57;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.pong-status-dot {
+  background: #ae8749;
+}
+
+.pong-status-dot[data-tone=live] {
+  background: #638e4d;
+  box-shadow: none;
+}
+
+.pong-side-label {
+  color: #61715c;
+  font-size: 12px;
+}
+
+.pong-network-error {
+  color: #8f682f;
+  background: #fbf5e9;
+  border-color: #dfcda7;
+  font-size: 13px;
+}
+
+.pong-controls {
+  border-color: var(--line);
+}
+
+.pong-control-copy {
+  color: #5d754f;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.pong-control-copy > svg {
+  color: #61715c;
+}
+
+.pong-control-copy small {
+  color: #61715c;
+  font-size: 12px;
+}
+
+.pong-touch-buttons .btn.is-pressed {
+  color: #fff;
+  background: #496f43;
+  border-color: #496f43;
+}
+
+.pong-rematch {
+  background: #eef5e8;
+  border-color: #d0dfc4;
+}
+
+.pong-rematch strong {
+  color: #3c6b36;
+  font-size: 17px;
+}
+
+.pong-rematch p {
+  color: #61715c;
+  font-size: 13px;
+}
+
+.pong-battle-tabs .btn {
+  color: #61715c;
+  background: #fff;
+  border-color: #d3dfc7;
+  font-size: 13px;
+}
+
+.pong-battle-tabs .btn.active {
+  color: #355e30;
+  background: #e9f1e1;
+  border-color: #9eb78c;
+}
+
+@media (max-width: 1250px) {
+  .expanded-lesson .lesson-content { padding: 28px; }
+}
+
+@media (max-width: 1100px) {
+  .pong-touch-buttons .btn { font-size: 0; }
+  .pong-mini-court { opacity: .5; }
+}
+
+@media (max-width: 700px) {
+  .pong-intro h2 { font-size: 27px; }
+  .pong-intro p,
+  .pong-entry > p { font-size: 14px; }
+  .pong-format { font-size: 0; }
+  .pong-room-actions .btn { font-size: 0; }
+  .pong-room-identity > strong { font-size: 19px; }
+  .pong-room-identity .pong-eyebrow { font-size: 10px; max-width: 52px; }
+  .pong-player strong,
+  .pong-player-right strong { font-size: 12px; }
+  .pong-player > div > span { font-size: 11px; }
+  .pong-score small { font-size: 8px; }
+  .pong-court-overlay p { font-size: 12px; }
+  .pong-court-focus { font-size: 9px; }
+  .pong-room-status { font-size: 12px; flex-wrap: wrap; }
+  .pong-side-label { font-size: 11px; }
+  .pong-control-copy { font-size: 12px; }
+  .pong-control-copy small { font-size: 11px; }
+  .pong-network-error { font-size: 12px; }
+  .pong-root kbd { font-size: 11px; }
+}
+
+@media (max-width: 620px) {
+  .expanded-lesson .lesson-content { padding: 24px 18px; }
+  .lesson-intro h1 { font-size: 26px; }
+  .expanded-lesson .lesson-content .lesson-lead { font-size: 16px; }
+  .expanded-lesson .lesson-content p,
+  .expanded-lesson .lesson-content .lesson-section > p { font-size: 15px; }
+  .learning-objectives { padding: 19px 16px; }
+  .learning-objectives li { font-size: 14px; }
+  .lesson-stages a { font-size: 12px; padding: 9px; }
+  .expanded-lesson .lesson-section h2 { font-size: 22px; }
+  .worked-example,
+  .practice-card,
+  .mistake-card { padding: 21px 15px; }
+  .expanded-lesson .example-heading h3 { font-size: 19px; }
+  .expanded-lesson .practice-heading h3 { font-size: 17px; }
+  .teaching-code-toolbar { padding: 11px; font-size: 12px; }
+  .copy-code { font-size: 11px; }
+  .teaching-code pre { font-size: 12px; padding: 18px 14px; }
+  .expected-output { padding: 16px 14px; }
+  .expected-output pre { font-size: 12px; }
+  .walkthrough li { font-size: 14px; }
+  .quiz-question { padding: 20px 14px; }
+  .quiz-question legend { font-size: 15px; }
+  .quiz-question .quiz-option { font-size: 14px; }
+  .question-feedback { font-size: 14px; }
+  .lesson-summary-box li { font-size: 14px; }
+  .lesson-pagination .btn { font-size: 12px; }
+  .lesson-resources > a { font-size: 14px; }
+  .task-output pre { font-size: 12px; }
+}
+
+@media (max-width: 390px) {
+  .pong-guide > h3 { font-size: 23px; }
+  .pong-player strong,
+  .pong-player-right strong { font-size: 11px; }
+  .pong-player > div > span { font-size: 10px; }
+  .pong-court-overlay p { font-size: 11px; }
+  .pong-touch-buttons .btn { font-size: 12px; }
+}
